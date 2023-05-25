@@ -1,0 +1,10 @@
+[package]
+name = "winit-cursor-hide-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow   = "1.0"
+pollster = "0.3"
+wgpu     = "0.16"
+winit    = "0.28.6"
