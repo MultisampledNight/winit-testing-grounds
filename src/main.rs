@@ -30,19 +30,23 @@ fn run() -> Result<Never> {
     event_loop.run(move |event, _, flow| {
         let result = match event {
             Event::WindowEvent { event, .. } => match event {
-                WindowEvent::CloseRequested => {
-                    *flow = ControlFlow::Exit;
-                    Ok(())
-                }
                 WindowEvent::MouseInput {
                     state: ElementState::Pressed,
                     ..
                 } => {
                     state.cursor_hidden = !state.cursor_hidden;
-                    state.window.set_cursor_visible(state.cursor_hidden);
+                    state.window.set_cursor_visible(!state.cursor_hidden);
                     state.window.request_redraw();
 
                     dbg!(state.cursor_hidden);
+                    Ok(())
+                }
+                WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
+                    state.reconfigure_surface();
+                    Ok(())
+                }
+                WindowEvent::CloseRequested => {
+                    *flow = ControlFlow::Exit;
                     Ok(())
                 }
                 _ => Ok(()),
@@ -137,13 +141,13 @@ impl State {
                 r: 0.1,
                 g: 0.2,
                 b: 0.4,
-                a: 0.0,
+                a: 1.0,
             },
             true => wgpu::Color {
                 r: 0.1,
                 g: 1.0,
                 b: 0.2,
-                a: 0.0,
+                a: 1.0,
             },
         };
         let render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
@@ -163,6 +167,10 @@ impl State {
         next_frame.present();
 
         Ok(())
+    }
+
+    fn reconfigure_surface(&self) {
+        configure_surface(&self.surface, &self.device, &self.adapter, &self.window);
     }
 }
 
