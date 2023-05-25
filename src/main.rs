@@ -34,11 +34,19 @@ fn run() -> Result<Never> {
                     state: ElementState::Pressed,
                     ..
                 } => {
-                    state.cursor_hidden = !state.cursor_hidden;
-                    state.window.set_cursor_visible(!state.cursor_hidden);
+                    state.cursor_visible = !state.cursor_visible;
+                    state.window.set_cursor_visible(state.cursor_visible);
                     state.window.request_redraw();
 
-                    dbg!(state.cursor_hidden);
+                    dbg!(state.cursor_visible);
+                    Ok(())
+                }
+                WindowEvent::CursorMoved { .. } => {
+                    state.cursor_visible = true;
+                    state.window.set_cursor_visible(true);
+                    state.window.request_redraw();
+
+                    dbg!(state.cursor_visible);
                     Ok(())
                 }
                 WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
@@ -70,7 +78,7 @@ struct State {
 
     window: Window,
 
-    cursor_hidden: bool,
+    cursor_visible: bool,
 }
 
 impl State {
@@ -114,7 +122,7 @@ impl State {
                 queue,
                 surface,
                 window,
-                cursor_hidden: false,
+                cursor_visible: false,
             },
         ))
     }
@@ -136,7 +144,7 @@ impl State {
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
 
-        let background_color = match self.cursor_hidden {
+        let background_color = match self.cursor_visible {
             false => wgpu::Color {
                 r: 0.1,
                 g: 0.2,
