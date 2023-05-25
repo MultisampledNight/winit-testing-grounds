@@ -3,12 +3,13 @@ use std::iter;
 use anyhow::{Context, Result};
 use pollster::FutureExt;
 use wgpu::{
-    CompositeAlphaMode, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits, PresentMode, Queue,
-    RequestAdapterOptions, Surface, SurfaceConfiguration,
-    TextureUsages, TextureViewDescriptor, Adapter, CommandEncoderDescriptor, RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp,
+    Adapter, CommandEncoderDescriptor, CompositeAlphaMode, Device, DeviceDescriptor, Features,
+    Instance, InstanceDescriptor, Limits, LoadOp, Operations, PresentMode, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, RequestAdapterOptions, Surface,
+    SurfaceConfiguration, TextureUsages, TextureViewDescriptor,
 };
 use winit::{
-    event::{Event, WindowEvent},
+    event::{ElementState, Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
@@ -25,18 +26,27 @@ enum Never {}
 
 fn run() -> Result<Never> {
     let (event_loop, mut state) = State::new()?;
-    state.window.request_redraw();
-    state.window.set_visible(true);
 
     event_loop.run(move |event, _, flow| {
         let result = match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => {
-                *flow = ControlFlow::Exit;
-                Ok(())
-            }
+            Event::WindowEvent { event, .. } => match event {
+                WindowEvent::CloseRequested => {
+                    *flow = ControlFlow::Exit;
+                    Ok(())
+                }
+                WindowEvent::MouseInput {
+                    state: ElementState::Pressed,
+                    ..
+                } => {
+                    state.cursor_hidden = !state.cursor_hidden;
+                    state.window.set_cursor_visible(state.cursor_hidden);
+                    state.window.request_redraw();
+
+                    dbg!(state.cursor_hidden);
+                    Ok(())
+                }
+                _ => Ok(()),
+            },
             Event::RedrawRequested(_) => state.draw().context("Could not draw next frame"),
             _ => Ok(()),
         };
@@ -55,6 +65,8 @@ struct State {
     surface: Surface,
 
     window: Window,
+
+    cursor_hidden: bool,
 }
 
 impl State {
@@ -88,20 +100,7 @@ impl State {
             .block_on()
             .context("Found no appropiate device")?;
 
-        let preferred_format = surface.get_capabilities(&adapter).formats[0];
-        let window_size = window.inner_size();
-        surface.configure(
-            &device,
-            &SurfaceConfiguration {
-                usage: TextureUsages::RENDER_ATTACHMENT,
-                format: preferred_format,
-                width: window_size.width,
-                height: window_size.height,
-                present_mode: PresentMode::Fifo,
-                alpha_mode: CompositeAlphaMode::Auto,
-                view_formats: Vec::new(),
-            },
-        );
+        configure_surface(&surface, &device, &adapter, &window);
 
         Ok((
             event_loop,
@@ -111,6 +110,7 @@ impl State {
                 queue,
                 surface,
                 window,
+                cursor_hidden: false,
             },
         ))
     }
@@ -128,16 +128,32 @@ impl State {
             ..TextureViewDescriptor::default()
         });
 
-        let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor::default());
 
+        let background_color = match self.cursor_hidden {
+            false => wgpu::Color {
+                r: 0.1,
+                g: 0.2,
+                b: 0.4,
+                a: 0.0,
+            },
+            true => wgpu::Color {
+                r: 0.1,
+                g: 1.0,
+                b: 0.2,
+                a: 0.0,
+            },
+        };
         let render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
             color_attachments: &[Some(RenderPassColorAttachment {
                 view: &next_frame_view,
                 resolve_target: None,
                 ops: Operations {
-                    load: LoadOp::Clear(wgpu::Color { r: 0.1, g: 0.2, b: 0.4, a: 0.0 }),
+                    load: LoadOp::Clear(background_color),
                     store: true,
-                }
+                },
             })],
             ..RenderPassDescriptor::default()
         });
@@ -148,4 +164,21 @@ impl State {
 
         Ok(())
     }
+}
+
+fn configure_surface(surface: &Surface, device: &Device, adapter: &Adapter, window: &Window) {
+    let preferred_format = surface.get_capabilities(adapter).formats[0];
+    let window_size = window.inner_size();
+    surface.configure(
+        device,
+        &SurfaceConfiguration {
+            usage: TextureUsages::RENDER_ATTACHMENT,
+            format: preferred_format,
+            width: window_size.width,
+            height: window_size.height,
+            present_mode: PresentMode::Fifo,
+            alpha_mode: CompositeAlphaMode::Auto,
+            view_formats: Vec::new(),
+        },
+    );
 }
