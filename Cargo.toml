@@ -7,4 +7,4 @@ edition = "2021"
 anyhow   = "1.0"
 pollster = "0.3"
 wgpu     = "0.16"
-winit    = "0.28.6"
+winit    = { git = "https://github.com/rust-windowing/winit", branch = "new-keyboard-v3", version = "0.28.6" }
