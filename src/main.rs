@@ -3,10 +3,9 @@ use std::iter;
 use anyhow::{Context, Result};
 use pollster::FutureExt;
 use wgpu::{
-    CompositeAlphaMode, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits,
-    MultisampleState, PresentMode, PrimitiveState, Queue, RenderPipeline, RenderPipelineDescriptor,
-    RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, Surface, SurfaceConfiguration,
-    TextureUsages, TextureViewDescriptor, VertexState, Adapter, CommandEncoderDescriptor, RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp,
+    CompositeAlphaMode, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits, PresentMode, Queue,
+    RequestAdapterOptions, Surface, SurfaceConfiguration,
+    TextureUsages, TextureViewDescriptor, Adapter, CommandEncoderDescriptor, RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp,
 };
 use winit::{
     event::{Event, WindowEvent},
@@ -54,7 +53,6 @@ struct State {
     device: Device,
     queue: Queue,
     surface: Surface,
-    pipeline: RenderPipeline,
 
     window: Window,
 }
@@ -105,29 +103,6 @@ impl State {
             },
         );
 
-        let shader = device.create_shader_module(ShaderModuleDescriptor {
-            label: None,
-            source: ShaderSource::Wgsl(
-                // all we're doing is clearing, no real shader needed
-                "@vertex fn placeholder() -> @builtin(position) vec4<f32> { return vec4(0.0, 0.0, 0.0, 0.0 ); }".into()
-            ),
-        });
-
-        let pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
-            label: None,
-            layout: None,
-            vertex: VertexState {
-                module: &shader,
-                entry_point: "placeholder",
-                buffers: &[],
-            },
-            fragment: None,
-            primitive: PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: MultisampleState::default(),
-            multiview: None,
-        });
-
         Ok((
             event_loop,
             State {
@@ -135,7 +110,6 @@ impl State {
                 device,
                 queue,
                 surface,
-                pipeline,
                 window,
             },
         ))
