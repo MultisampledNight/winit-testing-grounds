@@ -1,10 +1,12 @@
+use std::iter;
+
 use anyhow::{Context, Result};
 use pollster::FutureExt;
 use wgpu::{
     CompositeAlphaMode, Device, DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits,
     MultisampleState, PresentMode, PrimitiveState, Queue, RenderPipeline, RenderPipelineDescriptor,
     RequestAdapterOptions, ShaderModuleDescriptor, ShaderSource, Surface, SurfaceConfiguration,
-    TextureUsages, VertexState,
+    TextureUsages, TextureViewDescriptor, VertexState, Adapter, CommandEncoderDescriptor, RenderPassDescriptor, RenderPassColorAttachment, Operations, LoadOp,
 };
 use winit::{
     event::{Event, WindowEvent},
@@ -23,31 +25,42 @@ fn main() {
 enum Never {}
 
 fn run() -> Result<Never> {
-    let state = State::new()?;
+    let (event_loop, mut state) = State::new()?;
+    state.window.request_redraw();
+    state.window.set_visible(true);
 
-    state.event_loop.run(|event, _, flow| {
-        if let Event::WindowEvent {
-            event: WindowEvent::CloseRequested,
-            ..
-        } = event
-        {
-            *flow = ControlFlow::Exit;
+    event_loop.run(move |event, _, flow| {
+        let result = match event {
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                *flow = ControlFlow::Exit;
+                Ok(())
+            }
+            Event::RedrawRequested(_) => state.draw().context("Could not draw next frame"),
+            _ => Ok(()),
+        };
+
+        if let Err(err) = result {
+            eprintln!("{err}");
+            *flow = ControlFlow::ExitWithCode(1);
         }
     })
 }
 
 struct State {
+    adapter: Adapter,
     device: Device,
     queue: Queue,
     surface: Surface,
     pipeline: RenderPipeline,
 
-    event_loop: EventLoop<()>,
     window: Window,
 }
 
 impl State {
-    fn new() -> Result<Self> {
+    fn new() -> Result<(EventLoop<()>, Self)> {
         let event_loop = EventLoop::new();
         let window = Window::new(&event_loop)?;
 
@@ -115,13 +128,50 @@ impl State {
             multiview: None,
         });
 
-        Ok(State {
-            device,
-            queue,
-            surface,
-            pipeline,
+        Ok((
             event_loop,
-            window,
-        })
+            State {
+                adapter,
+                device,
+                queue,
+                surface,
+                pipeline,
+                window,
+            },
+        ))
+    }
+
+    fn draw(&mut self) -> Result<()> {
+        // very crude handling, the swapchain could be destroyed easily, but eh
+        let next_frame = self
+            .surface
+            .get_current_texture()
+            .context("Could not ask surface for the next texture")?;
+
+        let preferred_format = self.surface.get_capabilities(&self.adapter).formats[0];
+        let next_frame_view = next_frame.texture.create_view(&TextureViewDescriptor {
+            format: Some(preferred_format),
+            ..TextureViewDescriptor::default()
+        });
+
+        let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor::default());
+
+        let render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
+            color_attachments: &[Some(RenderPassColorAttachment {
+                view: &next_frame_view,
+                resolve_target: None,
+                ops: Operations {
+                    load: LoadOp::Clear(wgpu::Color { r: 0.1, g: 0.2, b: 0.4, a: 0.0 }),
+                    store: true,
+                }
+            })],
+            ..RenderPassDescriptor::default()
+        });
+        drop(render_pass);
+
+        self.queue.submit(iter::once(encoder.finish()));
+        next_frame.present();
+
+        Ok(())
     }
 }
