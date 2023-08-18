@@ -9,7 +9,7 @@ use wgpu::{
     SurfaceConfiguration, TextureUsages, TextureViewDescriptor,
 };
 use winit::{
-    event::{ElementState, Event, WindowEvent},
+    event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
@@ -21,32 +21,14 @@ fn main() {
     }
 }
 
-/// The never type ([`!`]) but not since it's not stable yet.
-enum Never {}
-
-fn run() -> Result<Never> {
+fn run() -> Result<()> {
     let (event_loop, mut state) = State::new()?;
 
     event_loop.run(move |event, _, flow| {
         let result = match event {
             Event::WindowEvent { event, .. } => match event {
-                WindowEvent::MouseInput {
-                    state: ElementState::Pressed,
-                    ..
-                } => {
-                    state.cursor_visible = !state.cursor_visible;
-                    state.window.set_cursor_visible(state.cursor_visible);
-                    state.window.request_redraw();
-
-                    dbg!(state.cursor_visible);
-                    Ok(())
-                }
-                WindowEvent::CursorMoved { .. } => {
-                    state.cursor_visible = true;
-                    state.window.set_cursor_visible(true);
-                    state.window.request_redraw();
-
-                    dbg!(state.cursor_visible);
+                WindowEvent::Touch(touch) => {
+                    dbg!(touch.phase, touch.location);
                     Ok(())
                 }
                 WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => {
@@ -54,7 +36,7 @@ fn run() -> Result<Never> {
                     Ok(())
                 }
                 WindowEvent::CloseRequested => {
-                    *flow = ControlFlow::Exit;
+                    flow.set_exit();
                     Ok(())
                 }
                 _ => Ok(()),
@@ -67,7 +49,9 @@ fn run() -> Result<Never> {
             eprintln!("{err}");
             *flow = ControlFlow::ExitWithCode(1);
         }
-    })
+    })?;
+
+    Ok(())
 }
 
 struct State {
@@ -77,13 +61,11 @@ struct State {
     surface: Surface,
 
     window: Window,
-
-    cursor_visible: bool,
 }
 
 impl State {
     fn new() -> Result<(EventLoop<()>, Self)> {
-        let event_loop = EventLoop::new();
+        let event_loop = EventLoop::new()?;
         let window = Window::new(&event_loop)?;
 
         let instance = Instance::new(InstanceDescriptor::default());
@@ -122,7 +104,6 @@ impl State {
                 queue,
                 surface,
                 window,
-                cursor_visible: false,
             },
         ))
     }
@@ -144,19 +125,11 @@ impl State {
             .device
             .create_command_encoder(&CommandEncoderDescriptor::default());
 
-        let background_color = match self.cursor_visible {
-            false => wgpu::Color {
-                r: 0.1,
-                g: 0.2,
-                b: 0.4,
-                a: 1.0,
-            },
-            true => wgpu::Color {
-                r: 0.1,
-                g: 1.0,
-                b: 0.2,
-                a: 1.0,
-            },
+        let background_color = wgpu::Color {
+            r: 0.05,
+            g: 0.05,
+            b: 0.05,
+            a: 1.0,
         };
         let render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
             color_attachments: &[Some(RenderPassColorAttachment {
