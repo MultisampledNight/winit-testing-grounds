@@ -281,12 +281,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cursor-icon"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "740bb192a8e2d1350119916954f4409ee7f62f149b536911eeb78ba5a20526bf"
-
-[[package]]
 name = "d3d12"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -791,9 +785,9 @@ checksum = "df3b9834c1e95694a05a828b59f55fa2afec6288359cda67146126b3f90a55d7"
 
 [[package]]
 name = "objc2"
-version = "0.3.0-beta.3.patch-leaks.3"
+version = "0.3.0-beta.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e01640f9f2cb1220bbe80325e179e532cb3379ebcd1bf2279d703c19fe3a468"
+checksum = "fe31e5425d3d0b89a15982c024392815da40689aceb34bad364d58732bcfd649"
 dependencies = [
  "block2",
  "objc-sys",
@@ -1646,8 +1640,7 @@ checksum = "1a515f5799fe4961cb532f983ce2b23082366b898e52ffbce459c86f67c8378a"
 
 [[package]]
 name = "winit"
-version = "0.28.6"
-source = "git+https://github.com/rust-windowing/winit?branch=master#3c3be71a775f772b50c2eca3de18853bb4fb9692"
+version = "0.28.3"
 dependencies = [
  "android-activity",
  "bitflags 1.3.2",
@@ -1655,7 +1648,6 @@ dependencies = [
  "cfg_aliases",
  "core-foundation",
  "core-graphics",
- "cursor-icon",
  "dispatch",
  "fnv",
  "instant",
@@ -1681,7 +1673,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "winit-cursor-hide-test"
+name = "winit-testing-grounds"
 version = "0.1.0"
 dependencies = [
  "anyhow",

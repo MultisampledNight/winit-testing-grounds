@@ -1,5 +1,5 @@
 [package]
-name = "winit-cursor-hide-test"
+name = "winit-testing-grounds"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,4 @@ edition = "2021"
 anyhow   = "1.0"
 pollster = "0.3"
 wgpu     = "0.16"
-winit    = { git = "https://github.com/rust-windowing/winit", branch = "master", version = "0.28.6" }
+winit    = "0.29.1-beta"
